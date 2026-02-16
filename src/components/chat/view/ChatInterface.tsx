@@ -9,6 +9,7 @@ import { useChatProviderState } from '../hooks/useChatProviderState';
 import { useChatSessionState } from '../hooks/useChatSessionState';
 import { useChatRealtimeHandlers } from '../hooks/useChatRealtimeHandlers';
 import { useChatComposerState } from '../hooks/useChatComposerState';
+import { PermissionContext } from '../contexts/PermissionContext';
 import type { Provider } from '../types/types';
 
 type PendingViewSession = {
@@ -272,8 +273,13 @@ function ChatInterface({
     );
   }
 
+  const permissionContextValue = React.useMemo(() => ({
+    pendingPermissionRequests,
+    handlePermissionDecision,
+  }), [pendingPermissionRequests, handlePermissionDecision]);
+
   return (
-    <>
+    <PermissionContext.Provider value={permissionContextValue}>
       <div className="h-full flex flex-col">
         <ChatMessagesPane
           scrollContainerRef={scrollContainerRef}
@@ -388,7 +394,7 @@ function ChatInterface({
       </div>
 
       <QuickSettingsPanel />
-    </>
+    </PermissionContext.Provider>
   );
 }
 
