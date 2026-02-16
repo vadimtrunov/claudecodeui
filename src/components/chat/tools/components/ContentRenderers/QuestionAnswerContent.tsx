@@ -22,6 +22,48 @@ export const QuestionAnswerContent: React.FC<QuestionAnswerContentProps> = ({
   const hasAnyAnswer = Object.keys(answers || {}).length > 0;
   const total = questions.length;
 
+  // When no answers yet (pending state), don't show expandable options with
+  // radio/checkbox indicators — those are read-only divs that look interactive
+  // but aren't. Instead show a hint pointing to the interactive panel below.
+  if (!hasAnyAnswer) {
+    return (
+      <div className={`space-y-1.5 ${className}`}>
+        {questions.map((q, idx) => (
+          <div key={idx} className="flex items-start gap-2.5 px-1">
+            <div className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center animate-pulse">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 dark:bg-blue-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                {q.header && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100/80 dark:border-blue-800/40">
+                    {q.header}
+                  </span>
+                )}
+                {total > 1 && (
+                  <span className="text-[10px] tabular-nums text-gray-400 dark:text-gray-500">
+                    {idx + 1}/{total}
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 leading-snug">
+                {q.question}
+              </div>
+            </div>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5 px-1 mt-1">
+          <svg className="w-3 h-3 text-blue-400 dark:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+          <span className="text-[11px] text-blue-500 dark:text-blue-400 font-medium">
+            Answer in the panel below
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-2 ${className}`}>
       {questions.map((q, idx) => {
@@ -176,12 +218,6 @@ export const QuestionAnswerContent: React.FC<QuestionAnswerContentProps> = ({
           </div>
         );
       })}
-
-      {!hasAnyAnswer && total === 1 && (
-        <div className="text-[11px] text-gray-400 dark:text-gray-500 italic">
-          Skipped
-        </div>
-      )}
     </div>
   );
 };
