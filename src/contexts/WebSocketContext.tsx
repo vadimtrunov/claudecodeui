@@ -34,28 +34,21 @@ const useWebSocketProviderState = (): WebSocketContextType => {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { token } = useAuth();
 
-  useEffect(() => {
-    connect();
-    
-    return () => {
-      unmountedRef.current = true;
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [token]); // everytime token changes, we reconnect
-
   const connect = useCallback(() => {
     if (unmountedRef.current) return; // Prevent connection if unmounted
+
+    // Close stale socket before creating a new one
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch { /* ignore */ }
+      wsRef.current = null;
+    }
+
     try {
       // Construct WebSocket URL
       const wsUrl = buildWebSocketUrl(token);
 
       if (!wsUrl) return console.warn('No authentication token found for WebSocket connection');
-      
+
       const websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
@@ -75,7 +68,7 @@ const useWebSocketProviderState = (): WebSocketContextType => {
       websocket.onclose = () => {
         setIsConnected(false);
         wsRef.current = null;
-        
+
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = setTimeout(() => {
           if (unmountedRef.current) return; // Prevent reconnection if unmounted
@@ -90,6 +83,36 @@ const useWebSocketProviderState = (): WebSocketContextType => {
     } catch (error) {
       console.error('Error creating WebSocket connection:', error);
     }
+  }, [token]); // everytime token changes, we reconnect
+
+  useEffect(() => {
+    connect();
+
+    // Force reconnect when page becomes visible again (e.g. phone wakes from sleep)
+    const handleVisibilityChange = () => {
+      if (document.hidden) return;
+      const socket = wsRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        // Clear any pending reconnect timer and reconnect immediately
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      unmountedRef.current = true;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, [token]); // everytime token changes, we reconnect
 
   const sendMessage = useCallback((message: any) => {
@@ -114,7 +137,7 @@ const useWebSocketProviderState = (): WebSocketContextType => {
 
 export const WebSocketProvider = ({ children }: { children: React.ReactNode }) => {
   const webSocketData = useWebSocketProviderState();
-  
+
   return (
     <WebSocketContext.Provider value={webSocketData}>
       {children}

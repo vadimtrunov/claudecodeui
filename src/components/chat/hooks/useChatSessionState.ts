@@ -702,6 +702,23 @@ export function useChatSessionState({
     setVisibleMessageCount((previousCount) => previousCount + 100);
   }, []);
 
+  // Resync session status when page becomes visible (e.g. phone wakes from sleep).
+  // This handles the case where claude-complete was missed while the WS was disconnected.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) return;
+      if (!selectedSession || !ws) return;
+      const provider = (localStorage.getItem('selected-provider') as Provider) || 'claude';
+      sendMessage({
+        type: 'check-session-status',
+        sessionId: selectedSession.id,
+        provider,
+      });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [selectedSession, ws, sendMessage]);
+
   return {
     chatMessages,
     setChatMessages,
