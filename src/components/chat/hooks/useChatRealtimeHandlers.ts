@@ -886,10 +886,16 @@ export function useChatRealtimeHandlers({
         const statusSessionId = latestMessage.sessionId;
         const isCurrentSession =
           statusSessionId === currentSessionId || (selectedSession && statusSessionId === selectedSession.id);
-        if (isCurrentSession && latestMessage.isProcessing) {
-          setIsLoading(true);
-          setCanAbortSession(true);
-          onSessionProcessing?.(statusSessionId);
+        if (isCurrentSession) {
+          if (latestMessage.isProcessing) {
+            setIsLoading(true);
+            setCanAbortSession(true);
+            onSessionProcessing?.(statusSessionId);
+          } else {
+            // Session is no longer processing — clear loading state
+            // This handles the case where claude-complete was missed (e.g. WS reconnect after sleep)
+            clearLoadingIndicators();
+          }
         }
         break;
       }
